@@ -73,7 +73,34 @@ Save and build the util library
 3) Write the code
 In Entity Library, write all properties
 In DAO Library, write the following code to Insert:
-		
+---------------------------------------------
+Stored Procedure:
+
+CREATE PROCEDURE [dbo].[InsertProductData]
+ @ProductName varchar(40),
+ @QuantityPerUnit  varchar(20),
+ @UnitPrice money,
+  @Discontinued bit,
+ @CategoryID int,
+  @SupplierID int,  
+ @ReorderLevel smallint,
+ @UnitsInStock smallint,
+ @UnitsOnOrder smallint
+
+
+AS
+	insert into Products values
+	(@ProductName,@SupplierID,@CategoryID,@QuantityPerUnit,
+	@UnitPrice,@UnitsInStock,@UnitsOnOrder,@ReorderLevel,@Discontinued)
+RETURN 0
+
+
+
+
+
+
+
+---------------------------------------------------
 
   public interface IProductService
   {
