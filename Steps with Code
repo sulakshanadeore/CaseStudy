@@ -93,7 +93,29 @@ AS
 	(@ProductName,@SupplierID,@CategoryID,@QuantityPerUnit,
 	@UnitPrice,@UnitsInStock,@UnitsOnOrder,@ReorderLevel,@Discontinued)
 RETURN 0
+*********************
 
+CREATE PROCEDURE sp_UpdateProductData
+	-- Add the parameters for the stored procedure here
+	@pid int,
+	@pname varchar(50),
+	@prodprice int
+
+AS
+BEGIN
+	-- SET NOCOUNT ON added to prevent extra result sets from
+	-- interfering with SELECT statements.
+	SET NOCOUNT ON;
+
+    -- Insert statements for procedure here
+	
+	update DemoProducts
+	set ProductName=@pname,
+	Price=@prodprice
+	where ProductID=@pid
+
+END
+GO
 
 
 
@@ -173,43 +195,212 @@ namespace CarConnectDaoLibrary
 
         public void DeleteProduct(int prodid)
         {
-            throw new NotImplementedException();
+            SqlConnection cn = DBPropertyUtil.AppConnection();
+            SqlCommand cmd = new SqlCommand("Delete from DemoProducts where Productid=@prodid", cn);
+            cmd.Parameters.AddWithValue("@prodid",prodid);
+            cn.Open();
+            cmd.ExecuteNonQuery();
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
         }
 
         public ProductsEntity GetProductByID(int prodid)
         {
-            throw new NotImplementedException();
+            ProductsEntity product = new ProductsEntity();
+            SqlConnection cn = DBPropertyUtil.AppConnection();
+            SqlCommand cmd = new SqlCommand("Select *  from DemoProducts where Productid=@prodid", cn);
+            
+            cn.Open();
+            cmd.Parameters.AddWithValue("@prodid", prodid);
+            SqlDataReader dr=cmd.ExecuteReader();
+            while (dr.Read()) 
+            {
+                product.Productid =Convert.ToInt32(dr["ProductID"]);
+                product.ProductName = dr["ProductName"].ToString();
+                product.UnitPrice = Convert.ToInt32(dr["Price"]);
+               
+            }
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+            if (product != null) { 
+            return product;
+       
+            }
+            else
+            {
+                throw new ProductNotFoundException("Pls check productid");
+            }
         }
 
         public ProductsEntity GetProductByName(string productName)
         {
-            throw new NotImplementedException();
+
+            ProductsEntity product = new ProductsEntity();
+            SqlConnection cn = DBPropertyUtil.AppConnection();
+            SqlCommand cmd = new SqlCommand("Select *  from DemoProducts where ProductName=@productName", cn);
+            cmd.Parameters.AddWithValue("@productName", productName);
+            cn.Open();
+            SqlDataReader dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                product.Productid = Convert.ToInt32(dr["ProductID"]);
+                product.ProductName = dr["ProductName"].ToString();
+                product.UnitPrice = Convert.ToInt32(dr["Price"]);
+
+
+
+            }
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+            if (product != null)
+            {
+                return product;
+
+
+            }
+            else
+            {
+                throw new ProductNotFoundException("Pls check productid");
+            }
+
+
+
+        }
+
+
+        public List<ProductsEntity> GetAllProducts()
+        {
+            List<ProductsEntity> productList = new List<ProductsEntity>();
+            SqlConnection cn = DBPropertyUtil.AppConnection();
+            SqlCommand cmd = new SqlCommand("Select *  from DemoProducts", cn);
+            cn.Open();
+            SqlDataReader dr = cmd.ExecuteReader();
+            while (dr.Read())
+            {
+                ProductsEntity  product = new ProductsEntity();
+                product.Productid = Convert.ToInt32(dr["ProductID"]);
+                product.ProductName = dr["ProductName"].ToString();
+                product.UnitPrice = Convert.ToInt32(dr["Price"]);
+
+                productList.Add(product);
+
+
+
+            }
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+            return productList;
+
+
         }
 
         public void UpdateProduct(ProductsEntity product)
         {
-            throw new NotImplementedException();
+            SqlConnection cn = DBPropertyUtil.AppConnection();
+            SqlCommand cmd = new SqlCommand("dbo.sp_UpdateProductData", cn);
+            cn.Open();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+            cmd.Parameters.AddWithValue("@pid", product.Productid);
+            cmd.Parameters.AddWithValue("@pname", product.ProductName);
+            cmd.Parameters.AddWithValue("@prodprice", product.UnitPrice);
+            
+            
+            cmd.ExecuteNonQuery();//insert/update/delete ---executenonquery
+
+            cmd.Dispose();
+            cn.Close();
+            cn.Dispose();
+
+
+
         }
+
+
+
     }
 }
 
 In the HElper Class:
 
-public class ProductsServiceHelper
+using CarConnectDaoLibrary;
+using CarConnectEntityLibary;
+namespace HelperLibrary
 {
-    ProductService service = null;
-    public ProductsServiceHelper()
+    public class ProductsServiceHelper
     {
-         service = new ProductService();
-    }
+        ProductService service = null;
+        public ProductsServiceHelper()
+        {
+             service = new ProductService();
+        }
 
-    public void InsertProduct(ProductsEntity p)
-    { 
-        service.AddProduct(p);  
-    
-    }
-    
+        public void InsertProduct(ProductsEntity p)
+        { 
+            service.AddProduct(p);  
+        
+        }
 
+        public void UpdateProduct(ProductsEntity p)
+        {
+            service.UpdateProduct(p);
+
+        }
+
+        public void DeleteProduct(int productid) { 
+        service.DeleteProduct(productid);
+        
+        }
+
+
+        public ProductsEntity FindProductByID(int productid)
+        {
+            ProductsEntity product = new ProductsEntity();
+            try
+            {
+                 product = service.GetProductByID(productid);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+
+            return product;
+        }
+
+
+        public ProductsEntity FindProductByName(string productname)
+        {
+            ProductsEntity product = new ProductsEntity();
+            try
+            {
+                product = service.GetProductByName(productname);
+            }
+            catch (Exception ex)
+            {
+
+                throw ex;
+            }
+
+            return product;
+        }
+
+        public List<ProductsEntity> ListOfAllProducts() 
+        { 
+        
+        List<ProductsEntity> productsList=service.GetAllProducts();
+        return productsList;
+        }
+
+
+
+
+    }
 }
 
 -----------------------------------------------------------------------
@@ -220,29 +411,114 @@ internal class Program
 {
     private static void Main(string[] args)
     {
+     
+        Console.WriteLine("Menu");
+        Console.WriteLine("1.Add 2 Update 3 Delete 4 Find ById 5. Find By Name   6.Show All Products 7.Exit");
+
+        int userchoice = Convert.ToInt32(Console.ReadLine());
+
+        switch (userchoice)
+        {
+
+            case 1:
+                InsertProduct();
+                break;
+            case 2:
+                ProductsEntity productentity = new ProductsEntity();
+                Console.WriteLine("Enter Product id");
+                productentity.Productid = Convert.ToInt32(Console.ReadLine());  
+                Console.WriteLine("Enter Productname");
+                productentity.ProductName = Console.ReadLine();
+                Console.WriteLine("enter price");
+                productentity.UnitPrice = Convert.ToDecimal(Console.ReadLine());
+
+                ProductsServiceHelper helper1    = new ProductsServiceHelper();  
+                helper1.UpdateProduct(productentity);
+
+
+                break;
+                case 3:
+                Console.WriteLine("Enter productid ");
+                int prodid=Convert.ToInt32(Console.ReadLine());
+                ProductsServiceHelper delhelper = new ProductsServiceHelper();
+                delhelper.DeleteProduct(prodid);
+
+
+
+
+                break;
+            case 4:
+                Console.WriteLine("Enter productid ");
+                 prodid = Convert.ToInt32(Console.ReadLine());
+                ProductsServiceHelper findhelper = new ProductsServiceHelper();
+                ProductsEntity productData=findhelper.FindProductByID(prodid);
+                Console.WriteLine(productData.Productid);
+                Console.WriteLine(productData.ProductName);
+                Console.WriteLine(productData.UnitPrice);
+
+
+
+
+
+                break;
+            case 5:
+                Console.WriteLine("Enter productname ");
+              string  prodname = Console.ReadLine();
+                ProductsServiceHelper findhelperbyname = new ProductsServiceHelper();
+                productData = findhelperbyname.FindProductByName(prodname);
+                Console.WriteLine(productData.Productid);
+                Console.WriteLine(productData.ProductName);
+                Console.WriteLine(productData.UnitPrice);
+
+
+
+                break;
+                case 6:
+                ProductsServiceHelper helper2 = new ProductsServiceHelper();
+               List<ProductsEntity> plist =helper2.ListOfAllProducts();
+                foreach (var item in plist)
+                {
+                    Console.WriteLine(item.Productid);
+                    Console.WriteLine(item.ProductName);
+                    Console.WriteLine(item.UnitPrice);
+                }
+
+                break;
+                case 7:
+                Environment.Exit(1);
+                    break;
+
+            default:
+                break;
+        }
+
+        
+    }
+
+    private static void InsertProduct()
+    {
         ProductsEntity productentity = new ProductsEntity();
         Console.WriteLine("Enter Productname");
         productentity.ProductName = Console.ReadLine();
         Console.WriteLine("Enter Supplierid");
-        productentity.SupplierID=Convert.ToInt32(Console.ReadLine());
+        productentity.SupplierID = Convert.ToInt32(Console.ReadLine());
         Console.WriteLine("Enter categoryid");
-        productentity.CategoryID=Convert.ToInt32(Console.ReadLine());
+        productentity.CategoryID = Convert.ToInt32(Console.ReadLine());
         Console.WriteLine("enter quantity per unit");
         productentity.QuantityPerUnit = Console.ReadLine();
         Console.WriteLine("enter price");
-        productentity.UnitPrice=Convert.ToDecimal(Console.ReadLine());
+        productentity.UnitPrice = Convert.ToDecimal(Console.ReadLine());
         Console.WriteLine("Enter Units in Stock");
         productentity.UnitsInStock = Convert.ToInt32(Console.ReadLine());
         Console.WriteLine("Enter Units on ORders"); productentity.UnitsOnOrder = Convert.ToInt32(Console.ReadLine());
-        Console.WriteLine("Enter reorder level"); 
+        Console.WriteLine("Enter reorder level");
         productentity.ReorderLevel = Convert.ToInt32(Console.ReadLine());
         Console.WriteLine("Enter disconitued or not");
-        productentity.Discontinued=Convert.ToBoolean(Console.ReadLine());
+        productentity.Discontinued = Convert.ToBoolean(Console.ReadLine());
         ProductsServiceHelper helper = new ProductsServiceHelper();
         helper.InsertProduct(productentity);
     }
 }
-
 
 
 
