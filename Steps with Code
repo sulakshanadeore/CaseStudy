@@ -1,0 +1,238 @@
+Database Connectivity:
+1) Ado.net -----
+2) LINQ
+3)EF
+
+ADO.net
+
+ActiveX Data Objects Component(Class) Library
+Using the classes defined in  ADO which is a part of .net (Ado.net) connect to the  database.
+
+1) SQL Server----- System.Data.SqlClient --Provider
+2) Oracle------ System.Data.OracleClient ---Provider
+3) Access--- System.Data.Oledb----Provider
+4) Excel---  System.Data.Oledb--- Provider
+5) Paradox--- System.Data.Odbc--- Provider
+
+
+Database Server: SQL SERVER
+servername
+username-- dbserver username
+password-- dbserver password
+(windows Userid and password)----Integrated Security
+==========================
+ server=.\sqlexpress;integrated security=true;trust server certificate=true;database=NorthwindOriginal
+===================================
+
+Architecture: 
+Connected : Real time apps (life, money, property)------Bank, Security, Shares etc
+Disconnected : Other real time apps
+
+------------------------------------------------------------------------
+
+1) Create stored Procedure
+2) Create all libraries
+   a) Open UtilLibrary :
+
+		  public class DBPropertyUtil
+  {
+
+ 
+      public static SqlConnection  AppConnection()
+      {
+         string cnstring= GetConnectionString();
+      SqlConnection cn=new SqlConnection(cnstring);
+          return cn;
+      
+      }
+
+      public static string GetConnectionString() {
+          return "server=.\\sqlexpress;database=NorthwindOriginal;integrated security=true;trust server certificate=true";
+
+
+      }
+
+}
+
+Save and build the util library
+
+	b ) Open DAO Library and reference Util Library in DAO
+        c) Go To Exception Library--- Save and Build it
+        d)  Open DAO Library and reference Exception Library in DAO
+        e) Go to Entity Library and Save and Build it
+        f)  Open DAO Library and reference Entity Library in DAO
+        g) Save And Build DAO
+        h) Open Helper Library and add reference of DAO in Helper,
+                                             and add reference of Entity in Helper,
+						 and add reference of Exception in Helper
+
+        i) Save and Build Helper
+	j) Open Console App and add reference of HElper in Console App,
+					  and add reference of Entity in Console App,
+						 and add reference of Exception in Console App
+3) Write the code
+In Entity Library, write all properties
+In DAO Library, write the following code to Insert:
+		
+
+  public interface IProductService
+  {
+      //Add reference of EntityLibrary in DAO
+    public  ProductsEntity GetProductByID(int prodid);
+      public ProductsEntity GetProductByName(string productName);
+      public void AddProduct(ProductsEntity product); 
+      public void UpdateProduct(ProductsEntity product);
+      public void DeleteProduct(int prodid);
+
+
+  }
+
+
+
+using CarConnectEntityLibary;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using CarConnectExceptionLibrary;
+using CarConnectUtilLibrary;
+using Microsoft.Data.SqlClient;
+
+namespace CarConnectDaoLibrary
+{
+    public class ProductService : IProductService
+    {
+        public void AddProduct(ProductsEntity product)
+        {
+
+
+
+            //StringBuilder sb = new StringBuilder();
+            //ProductsEntity p=new ProductsEntity();
+            //p.ProductName=product.ProductName;
+            //p.QuantityPerUnit = product.QuantityPerUnit;
+            //p.UnitPrice = product.UnitPrice;    
+            //p.Discontinued  =product.Discontinued;  
+            //p.CategoryID = product.CategoryID;
+            //p.SupplierID = product.SupplierID;  
+            //p.ReorderLevel = product.ReorderLevel;
+            //p.UnitsInStock = product.UnitsInStock;
+            //p.UnitsOnOrder = product.UnitsOnOrder;
+
+            //  sb.Append("insert into Products values(" + product.ProductName + "," + product.SupplierID + "," + product.CategoryID + "," + product.QuantityPerUnit + "," + product.UnitPrice + "," + product.UnitsInStock + "," + product.UnitsOnOrder + "," + product.ReorderLevel + "," + product.Discontinued + ")");
+            SqlConnection cn = DBPropertyUtil.AppConnection();
+            SqlCommand cmd = new SqlCommand("dbo.InsertProductData",cn);
+            cn.Open();
+            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+           
+            cmd.Parameters.AddWithValue("@ProductName", product.ProductName);
+            cmd.Parameters.AddWithValue("@QuantityPerUnit",product.QuantityPerUnit);
+            cmd.Parameters.AddWithValue("@UnitPrice", product.UnitPrice);
+            cmd.Parameters.AddWithValue("@CategoryID", product.CategoryID);
+            cmd.Parameters.AddWithValue("@SupplierID", product.SupplierID);
+            cmd.Parameters.AddWithValue("@ReorderLevel", product.ReorderLevel);
+            cmd.Parameters.AddWithValue("@UnitsInStock", product.UnitsInStock);
+            cmd.Parameters.AddWithValue("@UnitsOnOrder", product.UnitsOnOrder);
+            cmd.Parameters.AddWithValue("@Discontinued", product.Discontinued);
+          
+            cmd.ExecuteNonQuery();//insert/update/delete ---executenonquery
+            
+            cmd.Dispose();  
+            cn.Close();
+            cn.Dispose();
+
+        }
+
+        public void DeleteProduct(int prodid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ProductsEntity GetProductByID(int prodid)
+        {
+            throw new NotImplementedException();
+        }
+
+        public ProductsEntity GetProductByName(string productName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void UpdateProduct(ProductsEntity product)
+        {
+            throw new NotImplementedException();
+        }
+    }
+}
+
+In the HElper Class:
+
+public class ProductsServiceHelper
+{
+    ProductService service = null;
+    public ProductsServiceHelper()
+    {
+         service = new ProductService();
+    }
+
+    public void InsertProduct(ProductsEntity p)
+    { 
+        service.AddProduct(p);  
+    
+    }
+    
+
+}
+
+-----------------------------------------------------------------------
+In the Application, Main method: 
+using CarConnectEntityLibary;
+using HelperLibrary;
+internal class Program
+{
+    private static void Main(string[] args)
+    {
+        ProductsEntity productentity = new ProductsEntity();
+        Console.WriteLine("Enter Productname");
+        productentity.ProductName = Console.ReadLine();
+        Console.WriteLine("Enter Supplierid");
+        productentity.SupplierID=Convert.ToInt32(Console.ReadLine());
+        Console.WriteLine("Enter categoryid");
+        productentity.CategoryID=Convert.ToInt32(Console.ReadLine());
+        Console.WriteLine("enter quantity per unit");
+        productentity.QuantityPerUnit = Console.ReadLine();
+        Console.WriteLine("enter price");
+        productentity.UnitPrice=Convert.ToDecimal(Console.ReadLine());
+        Console.WriteLine("Enter Units in Stock");
+        productentity.UnitsInStock = Convert.ToInt32(Console.ReadLine());
+        Console.WriteLine("Enter Units on ORders"); productentity.UnitsOnOrder = Convert.ToInt32(Console.ReadLine());
+        Console.WriteLine("Enter reorder level"); 
+        productentity.ReorderLevel = Convert.ToInt32(Console.ReadLine());
+        Console.WriteLine("Enter disconitued or not");
+        productentity.Discontinued=Convert.ToBoolean(Console.ReadLine());
+        ProductsServiceHelper helper = new ProductsServiceHelper();
+        helper.InsertProduct(productentity);
+    }
+}
+
+
+
+
+4) In main,accept data and call the method.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
